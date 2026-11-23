@@ -48,3 +48,32 @@ jobs:
         with:
           name: scala-head-abi-diff
           path: results/
+
+      - name: Compile old Java consumers against 3.10.2-RC1
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/abi-consumers
+          javac -cp artifacts/scala-library-3.10.2-RC1.jar -d /tmp/abi-consumers tests/abi/PublicObjectConsumer.java tests/abi/InternalClassConsumer.java
+          echo 'JVM call owners in old-compiled consumers:'
+          javap -classpath /tmp/abi-consumers -c PublicObjectConsumer InternalClassConsumer | grep -A 10 -E '(public static void main|arrayHash)'
+      - name: Execute old bytecode against old and new runtime JARs
+        run: |
+          set -euo pipefail
+          mkdir -p results
+          for v in 3.10.2-RC1 HEAD; do
+            echo "--- RUNTIME=$v ---"
+            java -cp "/tmp/abi-consumers:artifacts/scala-library-$v.jar" PublicObjectConsumer 2>&1 | tee "results/public-$v.log"
+            set +e
+            java -cp "/tmp/abi-consumers:artifacts/scala-library-$v.jar" InternalClassConsumer > "results/internal-$v.log" 2>&1
+            rc=$?
+            set -e
+            echo "INTERNAL_EXIT=$rc"
+            cat "results/internal-$v.log"
+          done
+          echo '--- VERIFY PUBLIC API CROSS-RUNTIME ---'
+          diff -u results/public-3.10.2-RC1.log results/public-HEAD.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: old-bytecode-runtime-results
+          path: results/
