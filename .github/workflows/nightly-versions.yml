@@ -1,0 +1,31 @@
+name: Scala 3 post-fix nightly availability
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Inspect Scala official nightly Maven metadata
+        run: |
+          python3 - <<'PY'
+          import urllib.request,xml.etree.ElementTree as ET
+          sites=[
+            "https://repo.scala-lang.org/artifactory/maven-nightlies/org/scala-lang/scala-library/maven-metadata.xml",
+            "https://repo.scala-lang.org/artifactory/maven-nightlies/org/scala-lang/scala3-compiler_3/maven-metadata.xml",
+          ]
+          for site in sites:
+            print("METADATA",site,flush=True)
+            try:
+              req=urllib.request.Request(site,headers={"User-Agent":"scala3-abi-research/1.0"})
+              with urllib.request.urlopen(req,timeout=25) as r: raw=r.read()
+              root=ET.fromstring(raw)
+              vals=[x.text for x in root.findall(".//version") if x.text]
+              print("COUNT",len(vals),"LATEST",vals[-12:],flush=True)
+              for v in vals[-35:]:
+                if "2026112" in v: print("NOV23",v,flush=True)
+            except Exception as e:
+              print("ERR",repr(e),flush=True)
+          PY
