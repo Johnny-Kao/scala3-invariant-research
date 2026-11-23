@@ -1,0 +1,19 @@
+name: Scala 3 artifact versions
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check published Scala standard library versions
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 https://repo.maven.apache.org/maven2/org/scala-lang/scala-library/maven-metadata.xml -o /tmp/scala-maven-metadata.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as E
+          root=E.parse('/tmp/scala-maven-metadata.xml').getroot()
+          versions=[n.text for n in root.findall('.//version') if n.text and (n.text.startswith('3.10.2') or n.text.startswith('3.11.'))]
+          print('MATCHING_RELEASES:',versions[-35:])
+          PY
