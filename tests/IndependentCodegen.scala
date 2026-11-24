@@ -38,7 +38,7 @@ object IndependentCodegenProbe:
     assert(actual == 276)
     val xs = Array.tabulate[AnyRef](23)(i => Integer.valueOf(i+1))
     val xxl = fn.asInstanceOf[scala.runtime.FunctionXXL]
-    val viaForwarder = xxl.apply(xs)
+    val viaForwarder = xxl.apply(IArray.unsafeFromArray(xs))
     assert(viaForwarder == 276,s"FunctionXXL forwarder: $viaForwarder")
     2
 
