@@ -1,0 +1,36 @@
+name: Scala 3 new merged changes correctness probes
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Scala CLI
+        run: |
+          curl -fL --retry 3 https://github.com/VirtusLab/scala-cli/releases/latest/download/scala-cli-x86_64-pc-linux.gz -o /tmp/scala-cli.gz
+          gzip -d /tmp/scala-cli.gz
+          chmod +x /tmp/scala-cli
+      - name: Execute against latest published release candidates and post-merge nightly
+        env:
+          COURSIER_REPOSITORIES: https://repo.maven.apache.org/maven2|https://repo.scala-lang.org/artifactory/maven-nightlies
+        run: |
+          set -euo pipefail
+          mkdir -p results
+          for v in 3.10.2-RC1 3.11.0-RC1-bin-20261119-90f3daf-NIGHTLY; do
+            echo "VERSION=$v"
+            /tmp/scala-cli run tests/NewChangesProbe.scala --server=false --scala "$v" --main-class newChangesMain > "results/new-changes-$v.log" 2>&1 || { cat "results/new-changes-$v.log"; exit 1; }
+            grep NEW_CHANGE_INVARIANTS_PASS "results/new-changes-$v.log"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: new-changes-results
+          path: results/
