@@ -1,0 +1,23 @@
+name: Scala 3 specialized variance source-change probe
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Scala CLI
+        run: |
+          curl -fL --retry 3 https://github.com/VirtusLab/scala-cli/releases/latest/download/scala-cli-x86_64-pc-linux.gz -o /tmp/scala-cli.gz
+          gzip -d /tmp/scala-cli.gz
+          chmod +x /tmp/scala-cli
+      - name: Run against Scala 3 nightly after PR 27581
+        run: |
+          /tmp/scala-cli run tests/VariantDispatch.scala --server=false --scala '3.11.0-RC1-bin-20261119-90f3daf-NIGHTLY' --repository https://repo.scala-lang.org/artifactory/maven-nightlies --main-class test
