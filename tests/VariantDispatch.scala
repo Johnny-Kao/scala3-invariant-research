@@ -27,8 +27,24 @@ object VariantDispatchProbe:
     val nested = s.nested(mark("cur1", 1))(mark("cur2", 2))
     assert(nested == "1:2" && events == List("cur1","cur2"),s"$name curried=$events result=$nested")
 
+    // Receiver evaluation is part of the method call; it must precede arguments.
+    events = Nil
+    val direct = mark("recv-direct", s).put(mark("arg-one", 11),mark("arg-two", 12))
+    assert(direct == "11|12" && events == List("recv-direct","arg-one","arg-two"),s"$name direct evaluation=$events")
+
+    // Later arguments must not run if an earlier one throws.
+    events = Nil
+    val failed =
+      try
+        mark("recv-exception", s).put(
+          { events = events :+ "throw-first"; throw new IllegalStateException("first") },
+          mark("should-not-run", 9))
+        false
+      catch case _: IllegalStateException => true
+    assert(failed && events == List("recv-exception","throw-first"),s"$name exception ordering=$events")
+
   @main def test(): Unit =
     check(new Sink[Any] {}, "unspecialized")
     check(new Sink[Int] {}, "specialized")
-    println("VARIANT_DISPATCH_PASS 8 checks")
+    println("VARIANT_DISPATCH_PASS 12 checks")
 
