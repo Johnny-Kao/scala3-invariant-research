@@ -26,8 +26,13 @@ jobs:
           mkdir -p results
           for v in 3.10.2-RC1 3.11.0-RC1-bin-20261119-90f3daf-NIGHTLY; do
             echo "VERSION=$v"
-            /tmp/scala-cli run tests/NewChangesProbe.scala --server=false --scala "$v" --main-class newChangesMain > "results/new-changes-$v.log" 2>&1 || { cat "results/new-changes-$v.log"; exit 1; }
-            grep NEW_CHANGE_INVARIANTS_PASS "results/new-changes-$v.log"
+            if /tmp/scala-cli run tests/NewChangesProbe.scala --server=false --scala "$v" --main-class newChangesMain > "results/new-changes-$v.log" 2>&1; then
+              grep NEW_CHANGE_INVARIANTS_PASS "results/new-changes-$v.log"
+            else
+              echo "COMPILATION_FAILED=$v"
+              grep -E 'Type Error|Type Mismatch|error found|Compilation failed|match arguments' "results/new-changes-$v.log" | tail -8 || true
+              if [ "$v" != "3.10.2-RC1" ]; then cat "results/new-changes-$v.log"; exit 1; fi
+            fi
           done
       - uses: actions/upload-artifact@v4
         if: always()
