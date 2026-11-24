@@ -26,7 +26,7 @@ jobs:
           mkdir -p results
           for v in 3.9.0 3.10.2-RC1 3.11.0-RC1-bin-20261119-90f3daf-NIGHTLY; do
             echo "VERSION=$v"
-            /tmp/scala-cli run tests/IndependentCodegen.scala --server=false --scala "$v" --main-class independentCodegenMain > "results/codegen-$v.log" 2>&1 || { tail -70 "results/codegen-$v.log"; exit 1; }
+            /tmp/scala-cli run tests/IndependentCodegen.scala tests/QuoteCacheMacros.scala --server=false --scala "$v" --main-class independentCodegenMain > "results/codegen-$v.log" 2>&1 || { tail -70 "results/codegen-$v.log"; exit 1; }
             grep INDEPENDENT_CODEGEN_PASS "results/codegen-$v.log"
           done
       - uses: actions/upload-artifact@v4
